@@ -1,6 +1,6 @@
-#import "HWPHello.h"
+#import "HWPNeuraNest.h"
 
-@implementation HWPHello
+@implementation HWPNeuraNest
 
 - (void)greet:(CDVInvokedUrlCommand*)command
 {

@@ -1,45 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
 <plugin xmlns="http://www.phonegap.com/ns/plugins/1.0"
-        id="com.example.hello"
-        version="0.7.0">
+        id="net.linnovate.NeuraNest"
+        version="0.0.1">
 
-  <name>Hello</name>
+  <name>NeuraNest</name>
 
   <engines>
-    <engine name="cordova" version=">=3.4.0"/>
+    <engine name="cordova" version=">=3.8.0"/>
   </engines>
 
-  <asset src="www/hello.js" target="js/hello.js"/>
+  <asset src="www/NeuraNest.js" target="js/NeuraNest.js"/>
 
-  <js-module src="www/hello.js" name="hello">
-    <clobbers target="hello" />
+  <js-module src="www/NeuraNest.js" name="NeuraNest">
+    <clobbers target="NeuraNest" />
   </js-module>
 
   <platform name="android">
 
     <config-file target="res/xml/config.xml" parent="/*">
-      <feature name="Hello">
-        <param name="android-package" value="com.example.plugin.Hello"/>
+      <feature name="NeuraNest">
+        <param name="android-package" value="net.linnovate.NeuraNest.NeuraNest"/>
       </feature>
     </config-file>
 
-    <source-file src="src/android/Hello.java" target-dir="src/com/example/plugin/"/>
+    <source-file src="src/android/NeuraNest.java" target-dir="src/net/linnovate/NeuraNest/"/>
   </platform>
 
   <platform name="ios">
-    
+
     <config-file target="config.xml" parent="/widget">
-      <feature name="Hello">
-        <param name="ios-package" value="HWPHello" />
+      <feature name="NeuraNest">
+        <param name="ios-package" value="HWPNeuraNest" />
       </feature>
     </config-file>
 
-    <header-file src="src/ios/HWPHello.h" target-dir="HelloPlugin"/>
-    <source-file src="src/ios/HWPHello.m" target-dir="HelloPlugin"/>
+    <header-file src="src/ios/HWPNeuraNest.h" target-dir="NeuraNestPlugin"/>
+    <source-file src="src/ios/HWPNeuraNest.m" target-dir="NeuraNestPlugin"/>
   </platform>
 
   <platform name="wp7">
-    <source-file src="src/wp7/Hello.cs"/>
+    <source-file src="src/wp7/NeuraNest.cs"/>
   </platform>
 
 </plugin>

@@ -4,7 +4,7 @@ using WP7CordovaClassLib.Cordova.JSON;
 
 namespace Cordova.Extension.Commands
 {
-    public class Hello : BaseCommand
+    public class NeuraNest : BaseCommand
     {
         public void greet(string args)
         {
