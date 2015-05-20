@@ -24,6 +24,7 @@
     </config-file>
 
     <source-file src="src/android/NeuraNest.java" target-dir="src/net/linnovate/NeuraNest/"/>
+    <source-file src="src/android/util/Utils.java" target-dir="src/net/linnovate/NeuraNest/util/"/>
     <source-file src="src/android/libs/NeuraAndroidSDK_v1_6.jar" target-dir="libs" />
   </platform>
 
