@@ -3,6 +3,12 @@ package net.linnovate.NeuraNest.util;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
+import android.util.Log;
+
+import org.apache.cordova.PluginResult;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 public class Utils {
 
@@ -33,4 +39,25 @@ public class Utils {
     SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
     return prefs.getString(KEY_NEURA_ACCESS_TOKEN, null);
   }
+
+//  public static void sendData(JSONObject args) {
+//    try {
+//      JSONArray names = args.names();
+//      String name;
+//      JSONObject parameter = new JSONObject();
+//      for (int i = 0; i < args.length(); i++) {
+//        name = names.getString(i);
+//        parameter.put(name, args.getString(name));
+//      }
+//
+//
+//      // callback.success(parameter);
+//      PluginResult result = new PluginResult(PluginResult.Status.OK, parameter);
+//      result.setKeepCallback(true);
+//      webView.sendPluginResult(result, myCbkId);
+//
+//    } catch (JSONException e) {
+//      Log.e(TAG, e.toString());
+//    }
+//  }
 }

@@ -85,6 +85,8 @@ public class NeuraNest extends CordovaPlugin {
             NeuraApiClient.Builder builder = new NeuraApiClient.Builder(MainActivity);
             builder.addConnectionCallbacks(mNeuraServiceConnectionCallbacks);
             mNeuraApiClient = builder.build();
+
+            this.cordova.setActivityResultCallback(this);
         }
     }
 
@@ -96,23 +98,40 @@ public class NeuraNest extends CordovaPlugin {
 
         myCbkId = callbackContext.getCallbackId();
 
-        try {
-            if (action.equals("authenticate")) {
-                authenticate(data);
+        final JSONArray localData = data;
+        final CallbackContext localCtx = callbackContext;
 
-                callbackContext.success();
-                return true;
-            } else if (action.equals("subscribe")) {
-                registerEvents(data);
+        if (action.equals("authenticate")) {
 
-                callbackContext.success();
-                return true;
-            }
+            cordova.getActivity().runOnUiThread(new Runnable() {
+                public void run() {
+                    try {
+                        authenticate(localData);
+                        localCtx.success(); // Thread-safe.
+                    } catch (JSONException e) {
+                        Log.e(TAG, e.toString());
+                        localCtx.error(e.toString());
+                    }
+                }
+            });
+
+            return true;
+        } else if (action.equals("subscribe")) {
+            cordova.getActivity().runOnUiThread(new Runnable() {
+                public void run() {
+                    try {
+                        registerEvents(localData);
+                        localCtx.success(); // Thread-safe.
+                    } catch (JSONException e) {
+                        Log.e(TAG, e.toString());
+                        localCtx.error(e.toString());
+                    }
+                }
+            });
+
+            return true;
         }
-        catch (JSONException e) {
-            Log.e(TAG, e.toString());
-            callbackContext.error(e.toString());
-        }
+
 
         return false;
     }
@@ -139,12 +158,11 @@ public class NeuraNest extends CordovaPlugin {
 
         Log.d(TAG, "accessToken: " + accessToken);
 
-        JSONArray appPermissionsArr = data.getJSONArray(0);
-//        String[] appPermissions = new String[appPermissionsArr.length()];
-//        for (int i = 0; i < appPermissionsArr.length(); i++)
-//            appPermissions[i] = appPermissionsArr.getString(i);
-
-        registerToNeuraSpecificEvents(accessToken, ctx, appPermissionsArr.toString());
+        JSONArray eventsArr = data.getJSONArray(0);
+        for (int i = 0; i < eventsArr.length(); i++) {
+            registerToNeuraSpecificEvents(accessToken, ctx, eventsArr.getString(i));
+            Log.d(TAG, "Registered for event: " + eventsArr.getString(i));
+        }
     }
 
     /**
@@ -207,7 +225,7 @@ public class NeuraNest extends CordovaPlugin {
 
                         Toast.makeText(MainActivity,
                                 "Success: You subscribed to the event " + eventName,
-                                Toast.LENGTH_SHORT).show();
+                                Toast.LENGTH_LONG).show();
                     }
 
                     @Override
@@ -216,7 +234,7 @@ public class NeuraNest extends CordovaPlugin {
                                 MainActivity,
                                 "Error: Failed to subscribe to event " + eventName
                                         + ". Error code: " + NeuraUtil.errorCodeToString(errorCode),
-                                Toast.LENGTH_SHORT).show();
+                                Toast.LENGTH_LONG).show();
                     }
                 });
     }
@@ -260,15 +278,6 @@ public class NeuraNest extends CordovaPlugin {
                         MainActivity,
                         "Authentication Succeded ", Toast.LENGTH_SHORT)
                         .show();
-
-//                try {
-//                    JSONObject resData = new JSONObject();
-//                    resData.put("token", accessToken);
-//                }
-//                catch (JSONException e) {
-//                    Log.e(TAG, e.toString());
-//                }
-                //refreshUi();
             } else {
                 int errorCode = data.getIntExtra(NeuraConsts.EXTRA_ERROR_CODE, -1);
 
@@ -287,28 +296,6 @@ public class NeuraNest extends CordovaPlugin {
             }
         }
     }
-
-    private void sendData(JSONObject args) {
-        try {
-            JSONArray names = args.names();
-            String name;
-            JSONObject parameter = new JSONObject();
-            for (int i = 0; i < args.length(); i++) {
-                name = names.getString(i);
-                parameter.put(name, args.getString(name));
-            }
-
-
-            // callback.success(parameter);
-            PluginResult result = new PluginResult(PluginResult.Status.OK, parameter);
-            result.setKeepCallback(true);
-            webView.sendPluginResult(result, myCbkId);
-
-        } catch (JSONException e) {
-            Log.e(TAG, e.toString());
-        }
-    }
-
 
     private NeuraApiClient.ConnectionCallbacks mNeuraServiceConnectionCallbacks = new NeuraApiClient.ConnectionCallbacks() {
 
