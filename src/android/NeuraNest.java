@@ -2,15 +2,25 @@ package net.linnovate.NeuraNest;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.os.Bundle;
 import android.util.Log;
 import android.widget.Toast;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import java.util.ArrayList;
 
+import com.ionicframework.neuranest118899.MainActivity;
 import com.neura.sdk.config.NeuraConsts;
 import com.neura.sdk.object.AuthenticationRequest;
 import com.neura.sdk.object.Permission;
+import com.neura.sdk.object.SubscriptionRequest;
 import com.neura.sdk.service.NeuraApiClient;
+import com.neura.sdk.service.NeuraServices;
+import com.neura.sdk.service.SubscriptionRequestCallbacks;
 import com.neura.sdk.util.NeuraAuthUtil;
 import com.neura.sdk.util.NeuraUtil;
 
@@ -21,12 +31,8 @@ import org.apache.cordova.CordovaInterface;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CordovaWebView;
 import org.apache.cordova.LOG;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
+import org.apache.cordova.PluginResult;
 
-import java.util.ArrayList;
-import java.util.logging.Logger;
 
 public class NeuraNest extends CordovaPlugin {
     /**
@@ -38,7 +44,10 @@ public class NeuraNest extends CordovaPlugin {
     private static final String APP_REFERRER = "NeuraNest";
     private static final int NEURA_AUTHENTICATION_REQUEST_CODE = 0;
 
+    private static final String TAG = "NeuraNest";
     private NeuraApiClient mNeuraApiClient;
+
+    private String myCbkId;
 
     @Override
     public void initialize(CordovaInterface cordova, CordovaWebView webView) {
@@ -72,6 +81,11 @@ public class NeuraNest extends CordovaPlugin {
 
             dialogBuilder.create().show();
         }
+        else {
+            NeuraApiClient.Builder builder = new NeuraApiClient.Builder(MainActivity);
+            builder.addConnectionCallbacks(mNeuraServiceConnectionCallbacks);
+            mNeuraApiClient = builder.build();
+        }
     }
 
     @Override
@@ -80,20 +94,57 @@ public class NeuraNest extends CordovaPlugin {
         LOG.d("action", action);
         LOG.d("data", data.toString());
 
-        if (action.equals("authenticate")) {
-            String appId = data.getString(0);
-            String appSecret = data.getString(1);
-            JSONArray appPermissionsArr = data.getJSONArray(2);
-            String[] appPermissions = new String[appPermissionsArr.length()];
-            for(int i=0;i<appPermissionsArr.length();i++)
-                appPermissions[i] = appPermissionsArr.getString(i);
+        myCbkId = callbackContext.getCallbackId();
 
-            performNeuraAuthentication(appId, appSecret, appPermissions);
+        try {
+            if (action.equals("authenticate")) {
+                authenticate(data);
 
-            return true;
+                callbackContext.success();
+                return true;
+            } else if (action.equals("subscribe")) {
+                registerEvents(data);
+
+                callbackContext.success();
+                return true;
+            }
+        }
+        catch (JSONException e) {
+            Log.e(TAG, e.toString());
+            callbackContext.error(e.toString());
         }
 
         return false;
+    }
+
+    private void authenticate(JSONArray data) throws JSONException {
+        String appId = data.getString(0);
+        String appSecret = data.getString(1);
+        JSONArray appPermissionsArr = data.getJSONArray(2);
+        String[] appPermissions = new String[appPermissionsArr.length()];
+        for (int i = 0; i < appPermissionsArr.length(); i++)
+            appPermissions[i] = appPermissionsArr.getString(i);
+
+        performNeuraAuthentication(appId, appSecret, appPermissions);
+
+        mNeuraApiClient.connect();
+
+    }
+
+    private void registerEvents(JSONArray data) throws JSONException{
+        final Activity MainActivity = cordova.getActivity();
+        Context ctx = MainActivity.getApplication().getApplicationContext();
+
+        String accessToken = Utils.getAccessToken(ctx);
+
+        Log.d(TAG, "accessToken: " + accessToken);
+
+        JSONArray appPermissionsArr = data.getJSONArray(0);
+//        String[] appPermissions = new String[appPermissionsArr.length()];
+//        for (int i = 0; i < appPermissionsArr.length(); i++)
+//            appPermissions[i] = appPermissionsArr.getString(i);
+
+        registerToNeuraSpecificEvents(accessToken, ctx, appPermissionsArr.toString());
     }
 
     /**
@@ -127,8 +178,74 @@ public class NeuraNest extends CordovaPlugin {
         }
     }
 
+    /**
+     * Subscribe to receive events from Neura In order to receive events, the
+     * user must have first granted permission Once the app subscribes to an
+     * event, Neura will continue notify the app until it calls
+     * NeuraUtil.unregisterEvent() -- reseting the app won't stop event
+     * notifications
+     */
+    private void registerToNeuraSpecificEvents(String accessToken, Context context, String eventName) {
+        final Activity MainActivity = cordova.getActivity();
+        if (!mNeuraApiClient.isConnected()) {
+            Toast.makeText(
+                    MainActivity,
+                    "Error: You attempted to register to receive an event without being connected to Neura's service.",
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        SubscriptionRequest subscriptionRequest = new SubscriptionRequest.Builder(context)
+                .setAccessToken(accessToken).setAction(NeuraConsts.ACTION_SUBSCRIBE)
+                .setEventName(eventName).build();
+
+        NeuraServices.SubscriptionsAPI.executeSubscriptionRequest(mNeuraApiClient,
+                subscriptionRequest, new SubscriptionRequestCallbacks() {
+
+                    @Override
+                    public void onSuccess(String eventName, Bundle resultData, String identifier) {
+
+                        Toast.makeText(MainActivity,
+                                "Success: You subscribed to the event " + eventName,
+                                Toast.LENGTH_SHORT).show();
+                    }
+
+                    @Override
+                    public void onFailure(String eventName, Bundle resultData, int errorCode) {
+                        Toast.makeText(
+                                MainActivity,
+                                "Error: Failed to subscribe to event " + eventName
+                                        + ". Error code: " + NeuraUtil.errorCodeToString(errorCode),
+                                Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
+
+    /**
+     * Refresh the UI when the app launches
+     */
+    @Override
+    public void onStart() {
+        super.onStart();
+
+        LOG.d(TAG, "on start");
+
+        mNeuraApiClient.connect();
+    }
+
+    @Override
+    public void onStop() {
+        mNeuraApiClient.disconnect();
+
+        LOG.d(TAG, "on stop");
+
+        super.onStop();
+    }
+
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        LOG.d(TAG, "on activity result");
+
         final Activity MainActivity = cordova.getActivity();
 
         super.onActivityResult(requestCode, resultCode, data);
@@ -138,9 +255,19 @@ public class NeuraNest extends CordovaPlugin {
             if (resultCode != 0) {
                 String accessToken = NeuraAuthUtil.extractToken(data);
                 Utils.saveAccessTokenPersistent(MainActivity, accessToken);
-                Toast.makeText(MainActivity, "Authenticate Success!", Toast.LENGTH_SHORT)
+
+                Toast.makeText(
+                        MainActivity,
+                        "Authentication Succeded ", Toast.LENGTH_SHORT)
                         .show();
 
+//                try {
+//                    JSONObject resData = new JSONObject();
+//                    resData.put("token", accessToken);
+//                }
+//                catch (JSONException e) {
+//                    Log.e(TAG, e.toString());
+//                }
                 //refreshUi();
             } else {
                 int errorCode = data.getIntExtra(NeuraConsts.EXTRA_ERROR_CODE, -1);
@@ -160,5 +287,51 @@ public class NeuraNest extends CordovaPlugin {
             }
         }
     }
+
+    private void sendData(JSONObject args) {
+        try {
+            JSONArray names = args.names();
+            String name;
+            JSONObject parameter = new JSONObject();
+            for (int i = 0; i < args.length(); i++) {
+                name = names.getString(i);
+                parameter.put(name, args.getString(name));
+            }
+
+
+            // callback.success(parameter);
+            PluginResult result = new PluginResult(PluginResult.Status.OK, parameter);
+            result.setKeepCallback(true);
+            webView.sendPluginResult(result, myCbkId);
+
+        } catch (JSONException e) {
+            Log.e(TAG, e.toString());
+        }
+    }
+
+
+    private NeuraApiClient.ConnectionCallbacks mNeuraServiceConnectionCallbacks = new NeuraApiClient.ConnectionCallbacks() {
+
+        @Override
+        public void onConnected() {
+            LOG.d(TAG, "on neura connected");
+            final Activity MainActivity = cordova.getActivity();
+
+
+            Toast.makeText(MainActivity, "Success: Connected to Neura's service",
+                    Toast.LENGTH_SHORT).show();
+        }
+
+        @Override
+        public void onFailedToConnect(int errorCode) {
+            LOG.d(TAG, "on neura failed to connect");
+            final Activity MainActivity = cordova.getActivity();
+            Toast.makeText(
+                    MainActivity,
+
+                    "Error: Failed to connect to Neura's service. Error code: "
+                            + NeuraUtil.errorCodeToString(errorCode), Toast.LENGTH_SHORT).show();
+        }
+    };
 
 }
