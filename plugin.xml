@@ -11,7 +11,7 @@
 
   <asset src="www/NeuraNest.js" target="js/NeuraNest.js"/>
 
-  <js-module src="www/NeuraNest.js" name="NeuraNest">
+  <js-module src="www/neuraNest.js" name="NeuraNest">
     <clobbers target="NeuraNest" />
   </js-module>
 
