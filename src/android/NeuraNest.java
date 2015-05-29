@@ -2,9 +2,11 @@ package net.linnovate.NeuraNest;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.Toast;
@@ -47,12 +49,13 @@ public class NeuraNest extends CordovaPlugin {
     private static final String TAG = "NeuraNest";
     private NeuraApiClient mNeuraApiClient;
 
-    private String myCbkId;
+    private CallbackContext callbackContext;
+
+    private BroadcastReceiver receiver;
 
     @Override
     public void initialize(CordovaInterface cordova, CordovaWebView webView) {
         super.initialize(cordova, webView);
-        // your init code here
 
         /**
          * The Neura app has certain requirements, including: (1) the Neura app
@@ -88,6 +91,29 @@ public class NeuraNest extends CordovaPlugin {
 
             this.cordova.setActivityResultCallback(this);
         }
+
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction("com.neura.android.ACTION_NEURA_EVENT");
+
+        BroadcastReceiver r = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                String action = intent.getAction();
+                String eventName = intent.getStringExtra(NeuraConsts.EXTRA_EVENT_NAME);
+
+                if (action.equalsIgnoreCase(NeuraConsts.ACTION_NEURA_EVENT)) {
+                    try {
+                        JSONObject result = new JSONObject();
+                        result.put("event", eventName);
+                        Utils.sendData(result, NeuraNest.this.callbackContext);
+                    } catch (JSONException e) {
+                        Log.e(TAG, e.toString());
+                    }
+                }
+
+            }
+        };
+        webView.getContext().registerReceiver(r, intentFilter);
     }
 
     @Override
@@ -96,21 +122,17 @@ public class NeuraNest extends CordovaPlugin {
         LOG.d("action", action);
         LOG.d("data", data.toString());
 
-        myCbkId = callbackContext.getCallbackId();
-
         final JSONArray localData = data;
-        final CallbackContext localCtx = callbackContext;
+        this.callbackContext = callbackContext;
 
         if (action.equals("authenticate")) {
-
             cordova.getActivity().runOnUiThread(new Runnable() {
                 public void run() {
                     try {
                         authenticate(localData);
-                        localCtx.success(); // Thread-safe.
                     } catch (JSONException e) {
+                        Utils.sendActionError("authenticate", e.toString(), NeuraNest.this.callbackContext);
                         Log.e(TAG, e.toString());
-                        localCtx.error(e.toString());
                     }
                 }
             });
@@ -121,17 +143,15 @@ public class NeuraNest extends CordovaPlugin {
                 public void run() {
                     try {
                         registerEvents(localData);
-                        localCtx.success(); // Thread-safe.
                     } catch (JSONException e) {
+                        Utils.sendActionError("subscribe", e.toString(), NeuraNest.this.callbackContext);
                         Log.e(TAG, e.toString());
-                        localCtx.error(e.toString());
                     }
                 }
             });
 
             return true;
         }
-
 
         return false;
     }
@@ -205,6 +225,8 @@ public class NeuraNest extends CordovaPlugin {
      */
     private void registerToNeuraSpecificEvents(String accessToken, Context context, String eventName) {
         final Activity MainActivity = cordova.getActivity();
+        final BroadcastReceiver receiver = this.receiver;
+
         if (!mNeuraApiClient.isConnected()) {
             Toast.makeText(
                     MainActivity,
@@ -226,6 +248,8 @@ public class NeuraNest extends CordovaPlugin {
                         Toast.makeText(MainActivity,
                                 "Success: You subscribed to the event " + eventName,
                                 Toast.LENGTH_LONG).show();
+                        Utils.sendActionSuccess("subscribe", NeuraNest.this.callbackContext);
+
                     }
 
                     @Override
@@ -235,6 +259,7 @@ public class NeuraNest extends CordovaPlugin {
                                 "Error: Failed to subscribe to event " + eventName
                                         + ". Error code: " + NeuraUtil.errorCodeToString(errorCode),
                                 Toast.LENGTH_LONG).show();
+                        Utils.sendActionError("subscribe", NeuraUtil.errorCodeToString(errorCode), NeuraNest.this.callbackContext);
                     }
                 });
     }
@@ -272,14 +297,14 @@ public class NeuraNest extends CordovaPlugin {
             //if (resultCode == RESULT_OK) {
             if (resultCode != 0) {
                 String accessToken = NeuraAuthUtil.extractToken(data);
-                Utils.saveAccessTokenPersistent(MainActivity, accessToken);
-
+                Utils.sendActionSuccess("authenticate", NeuraNest.this.callbackContext);
                 Toast.makeText(
                         MainActivity,
                         "Authentication Succeded ", Toast.LENGTH_SHORT)
                         .show();
             } else {
                 int errorCode = data.getIntExtra(NeuraConsts.EXTRA_ERROR_CODE, -1);
+                Utils.sendActionError("authenticate", NeuraUtil.errorCodeToString(errorCode), NeuraNest.this.callbackContext);
 
                 Toast.makeText(
                         MainActivity,
