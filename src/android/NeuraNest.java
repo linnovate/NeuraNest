@@ -297,6 +297,7 @@ public class NeuraNest extends CordovaPlugin {
             //if (resultCode == RESULT_OK) {
             if (resultCode != 0) {
                 String accessToken = NeuraAuthUtil.extractToken(data);
+                Utils.saveAccessTokenPersistent(MainActivity, accessToken);
                 Utils.sendActionSuccess("authenticate", NeuraNest.this.callbackContext);
                 Toast.makeText(
                         MainActivity,
