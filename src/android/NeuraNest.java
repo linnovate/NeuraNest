@@ -15,7 +15,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import java.util.ArrayList;
 
-import com.ionicframework.neuranest118899.MainActivity;
+import com.ionicframework.neuranest119000.MainActivity;
 import com.neura.sdk.config.NeuraConsts;
 import com.neura.sdk.object.AuthenticationRequest;
 import com.neura.sdk.object.Permission;
