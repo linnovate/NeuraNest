@@ -244,7 +244,6 @@ public class NeuraNest extends CordovaPlugin {
 
                     @Override
                     public void onSuccess(String eventName, Bundle resultData, String identifier) {
-
                         Toast.makeText(MainActivity,
                                 "Success: You subscribed to the event " + eventName,
                                 Toast.LENGTH_LONG).show();
@@ -254,11 +253,6 @@ public class NeuraNest extends CordovaPlugin {
 
                     @Override
                     public void onFailure(String eventName, Bundle resultData, int errorCode) {
-                        Toast.makeText(
-                                MainActivity,
-                                "Error: Failed to subscribe to event " + eventName
-                                        + ". Error code: " + NeuraUtil.errorCodeToString(errorCode),
-                                Toast.LENGTH_LONG).show();
                         Utils.sendActionError("subscribe", NeuraUtil.errorCodeToString(errorCode), NeuraNest.this.callbackContext);
                     }
                 });
@@ -328,11 +322,6 @@ public class NeuraNest extends CordovaPlugin {
         @Override
         public void onConnected() {
             LOG.d(TAG, "on neura connected");
-            final Activity MainActivity = cordova.getActivity();
-
-
-            Toast.makeText(MainActivity, "Success: Connected to Neura's service",
-                    Toast.LENGTH_SHORT).show();
         }
 
         @Override
