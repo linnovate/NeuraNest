@@ -151,6 +151,14 @@ public class NeuraNest extends CordovaPlugin {
             });
 
             return true;
+        } else if (action.equals("connect")) {
+            if (mNeuraApiClient.isConnected()) {
+                Utils.sendActionSuccess("connect", this.callbackContext);
+            } else {
+                mNeuraApiClient.connect();
+            }
+
+            return true;
         }
 
         return false;
@@ -321,6 +329,7 @@ public class NeuraNest extends CordovaPlugin {
 
         @Override
         public void onConnected() {
+            Utils.sendActionSuccess("connect", NeuraNest.this.callbackContext);
             LOG.d(TAG, "on neura connected");
         }
 

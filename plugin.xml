@@ -9,9 +9,9 @@
     <engine name="cordova" version=">=3.8.0"/>
   </engines>
 
-  <asset src="www/NeuraNest.js" target="js/NeuraNest.js"/>
+  <asset src="www/neuraNest.js" target="js/neuraNest.js"/>
 
-  <js-module src="www/NeuraNest.js" name="NeuraNest">
+  <js-module src="www/neuraNest.js" name="NeuraNest">
     <clobbers target="NeuraNest" />
   </js-module>
 
@@ -23,16 +23,7 @@
       </feature>
     </config-file>
 
-    <config-file target="AndroidManifest.xml" parent="/manifest/application">
-      <receiver android:name="net.linnovate.NeuraNest.NeuraReceiver" >
-        <intent-filter>
-            <action android:name="com.neura.android.ACTION_NEURA_EVENT" />
-        </intent-filter>
-      </receiver>
-    </config-file>
-
     <source-file src="src/android/NeuraNest.java" target-dir="src/net/linnovate/NeuraNest/"/>
-    <source-file src="src/android/NeuraReceiver.java" target-dir="src/net/linnovate/NeuraNest/"/>
     <source-file src="src/android/util/Utils.java" target-dir="src/net/linnovate/NeuraNest/util/"/>
     <source-file src="src/android/libs/NeuraAndroidSDK_v1_6.jar" target-dir="libs" />
   </platform>
